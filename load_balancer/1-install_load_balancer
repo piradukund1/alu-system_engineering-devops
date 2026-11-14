@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Installs HAProxy and load balances traffic between web-01 and web-02 using roundrobin
+WEB01_IP="18.132.197.16"
+WEB02_IP="WEB_02_IP_HERE"
+apt-get update -y
+apt-get install -y haproxy
+echo "ENABLED=1" > /etc/default/haproxy
+cat > /etc/haproxy/haproxy.cfg <<CFG
+global
+	log /dev/log local0
+	maxconn 2048
+	user haproxy
+	group haproxy
+	daemon
+
+defaults
+	log global
+	mode http
+	option httplog
+	option dontlognull
+	timeout connect 5000
+	timeout client 50000
+	timeout server 50000
+
+frontend http_front
+	bind *:80
+	default_backend http_back
+
+backend http_back
+	balance roundrobin
+	server 7295-web-01 ${WEB01_IP}:80 check
+	server 7295-web-02 ${WEB02_IP}:80 check
+CFG
+service haproxy restart
